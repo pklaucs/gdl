@@ -1,9 +1,9 @@
 pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
     FIXED = fixed, SEED = seed, $
-    SNR_OUT = snr_out, RAND_OUT = rand_out
+    SNR_OUT = snr_out, RAND_OUT = rand_out, TEST=test
 
 ;git test
-
+;git test
     ; run with modelcorr4, 600, 0.1, 0, 1000, xc, 1.0e9
     ; enter lambda0, deltalam in nm
     ; NOTE: for count rates, use mag 0 star --> 10300 photons/s/cm^2/nm
@@ -125,21 +125,49 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
             end
 
             ; a1 is 512 element array of random nums
+            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+            if keyword_set(test) then begin
+            ; 06/08/20 added by paul
+            a2=a1
+            ;inserts the first 51 elements of randomu
+            a2(0:50)=randomu(seed,tdim)*2*!pi ;
+            a2=complex(cos(a2),sin(a2))
+            a2=fft(a2,-1)
+            b2=a2*mask
+            b2=fft(b2,1)
+            b2=b2*conj(b2)
+            endif
+            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
             a1 = complex(cos(a1), sin(a1)) ; uniform random numbers
             a1 = fft(a1, -1) ; -1 so forward
             b1 = a1*mask     ; get rid of high frequencies
             b1 = fft(b1, 1)  ; backward
+
             b1 = b1 * conj(b1) ; to get intensities
             ; the three lines below set integration interval relative to
             ; "speckle" lifetime
             if tdim eq 64 then s1(j2) = mean(b1(0:50 - 1))
-            if tdim eq 512 then s1(j2) = mean(b1(0:500 - 1)) ; default tdim
+            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+            ; 06/08/20 added by Paul
+            if tdim eq 512 then begin
+              s1(j2) = mean(b1(0:500 - 1)) ; default tdim
+              if keyword_set(test) then s2(j2) = mean(b2(0:500-1)) ; this is new
+            endif
+            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
             if tdim eq 1024 then s1(j2) = mean(b1(0:1000 - 1))
         endfor
         ; s1 is array of mean intensities at different time points
         s1 = s1 / mean(s1) * factor ; create light intensity array,
                                     ; scale s1 by mean and multiply by factor
                                     ; factor = countrate*50.0e-12
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; 06/08/20 added by Paul
+        if keyword_set(test) then s2 = s2 / mean(s2) * factor
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
         ;print, s1(0:49)
         ;s2=shift(s1,-delay)
         ;if tdim eq 64 then plot,findgen(tdim),b1
@@ -159,6 +187,28 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
         endif $
         else begin
             for i = 0, 8191 do begin
+
+              if keyword_set(test) then begin
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                ; 06/08/20 added by Paul
+
+                ch1(i) = randomu(seed, poisson = s1(i))
+
+                ; if correlated signals are desired, use the following line
+                ch2(i) = randomu(seed, poisson = s2(i))
+
+                ;;;;;;;;;;;;;;;;;;;;;;;;;;;;3 Scopes;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                ;note using s1 here as did for ch1
+                ;correlation between ch1 and ch3 should be highest
+                ch3(i) = randomu(seed, poisson = s1(i))
+
+                ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+                ; if uncorrelated signals are desired, use the following line
+                ; ch2(i) = randomu(seed,poisson=s2(i))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+              endif else begin
                 ch1(i) = randomu(seed, poisson = s1(i))
 
                 ; if correlated signals are desired, use the following line
@@ -170,6 +220,8 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
 
                 ; if uncorrelated signals are desired, use the following line
                 ; ch2(i) = randomu(seed,poisson=s2(i))
+
+              endif
             endfor
         endelse
 
