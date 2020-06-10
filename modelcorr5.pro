@@ -4,6 +4,7 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
 
 ;git test
 ;git test
+
     ; run with modelcorr4, 600, 0.1, 0, 1000, xc, 1.0e9
     ; enter lambda0, deltalam in nm
     ; NOTE: for count rates, use mag 0 star --> 10300 photons/s/cm^2/nm
@@ -126,11 +127,11 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
 
             ; a1 is 512 element array of random nums
             ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-            if keyword_set(test) then begin
+            if (n_elements(test) ne 0) then begin
             ; 06/08/20 added by paul
             a2=a1
             ;inserts the first 51 elements of randomu
-            a2(0:50)=randomu(seed,tdim)*2*!pi ;
+            a2(0:500 )=randomu(seed,tdim)*2*!pi ;
             a2=complex(cos(a2),sin(a2))
             a2=fft(a2,-1)
             b2=a2*mask
@@ -153,7 +154,7 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
             ; 06/08/20 added by Paul
             if tdim eq 512 then begin
               s1(j2) = mean(b1(0:500 - 1)) ; default tdim
-              if keyword_set(test) then s2(j2) = mean(b2(0:500-1)) ; this is new
+              if (n_elements(test) ne 0) then s2(j2) = mean(b2(0:500-1)) ; this is new
             endif
             ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
             if tdim eq 1024 then s1(j2) = mean(b1(0:1000 - 1))
@@ -165,7 +166,7 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ; 06/08/20 added by Paul
-        if keyword_set(test) then s2 = s2 / mean(s2) * factor
+        if (n_elements(test) ne 0) then s2 = s2 / mean(s2) * factor
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         ;print, s1(0:49)
@@ -188,7 +189,7 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
         else begin
             for i = 0, 8191 do begin
 
-              if keyword_set(test) then begin
+              if (n_elements(test) ne 0) then begin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 ; 06/08/20 added by Paul
 
@@ -221,7 +222,7 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
                 ; if uncorrelated signals are desired, use the following line
                 ; ch2(i) = randomu(seed,poisson=s2(i))
 
-              endif
+              endelse
             endfor
         endelse
 
