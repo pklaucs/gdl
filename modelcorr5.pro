@@ -1,15 +1,15 @@
 pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
     FIXED = fixed, SEED = seed, $
-    SNR_OUT = snr_out, RAND_OUT = rand_out, TEST=test
-
-;git test
-;git test
+    SNR_OUT = snr_out, RAND_OUT = rand_out, TEST=test, source_size, baseline
 
     ; run with modelcorr4, 600, 0.1, 0, 1000, xc, 1.0e9
     ; enter lambda0, deltalam in nm
     ; NOTE: for count rates, use mag 0 star --> 10300 photons/s/cm^2/nm
     ; (true for 540 nm, B-V=0)
     ; see B. Cameron Reed, JRAS Canada, Vol. 87, p. 123.
+
+    ; source_size in arcsec
+    ; baseline in m
 
     ; In this version, each time step is 50ps, deadtime dt = 1540 (77ns)
     ; "FRAMES" ARE 409.6ns
@@ -96,6 +96,44 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
                              seed)
     endif
 
+    ; calculate sinc_scale
+    ; we are trying to reproduce corr vs baseline function for some baseline
+    ; so for some baseline, we need to produce the correct normalised correlation value
+    ; we do this with sinc_scale, which determines how correlated scope 1 & 2 and scope 2 & 3 will be
+    ; note sinc_scale is decorrelating scope 2
+    ; from plots produced 6/2020 can see that decorrelation is linear function of sinc_scale values
+    ; to produce correlation plot, need to get max correlation (corresponding to zero basline)
+    ; to get this, just make sinc_scale=0
+    ; the value of the correlation here will be used to normalize all the correlations on the plot
+    ; so sinc_scale =0 corresponds to corr max
+    ; sinc_scale=500-1 corresponds to corr 0
+    ; x=findgen(1001)/100-5 ; gen floats from -5 to pos 5
+    ;  x=findgen(101)/100; 0 to 1
+    ; y=sinc(x)
+    ; y = 1-y
+    ; so now want to be able to input ang diameter of star and then make sinc_scale based off that
+    ; 1 arcsec = 4.84814e-6 rad
+    ; note arcsec denoted with "
+    ; sirius is 0.005936"
+    ; .005936 * π/648000. radians
+    ; relationship between lam B and ang size is:
+    ; alpha=lam/B
+    ; B that yields zero coherence is:
+    ; B=lam/alpha
+    ; for sirius
+    ; B=(532e-9)/(.005936 * π/648000.)=18.485997
+    ; so now for say baseline B=10
+    ; sinc_scale = sinc(10/18.485998)*500
+
+    if baseline ne 0 then begin
+    source_size_rad=source_size * !DPI/648000.
+    zero_baseline=lambda0/source_size_rad
+    sinc_scale=(1-sinc(baseline/zero_baseline))*500
+    endif else begin
+    sinc_scale=0 ; sinc(0)=1
+    endelse
+
+
     for j = 1, trials do begin
 
         if j / 100 eq j * 1.0 / 100. then print, 'Working on trial ', j, $ ; true when j=0, 100, 200
@@ -131,7 +169,7 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
             ; 06/08/20 added by paul
             a2=a1
             ;inserts the first 51 elements of randomu
-            a2(0:500 )=randomu(seed,tdim)*2*!pi ;
+            a2(0:sinc_scale )=randomu(seed,tdim)*2*!pi ;
             a2=complex(cos(a2),sin(a2))
             a2=fft(a2,-1)
             b2=a2*mask
