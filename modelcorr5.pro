@@ -124,13 +124,21 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
     ; B=(532e-9)/(.005936 * π/648000.)=18.485997
     ; so now for say baseline B=10
     ; sinc_scale = sinc(10/18.485998)*500
+    ;baseline=findgen(1001)/30; 0 to 33
+    ; https://mathworld.wolfram.com/BesselFunctionZeros.html
+    ; j bessel function zeros
+    ; j_0 --> 2.4048
+    ; beselj(2.4048,0)= 1.33004e-05
+
+
 
     if baseline ne 0 then begin
-    source_size_rad=source_size * !DPI/648000.
-    zero_baseline=lambda0/source_size_rad
-    sinc_scale=(1-sinc(baseline/zero_baseline))*500
+      source_size_rad=source_size * !DPI/648000.
+      zero_baseline=lambda0/source_size_rad ; baseline that gives zero correlation
+    ;  sinc_scale=(1-sinc(baseline/zero_baseline)^2)*500
+    sinc_scale=(1-beselj(baseline/zero_baseline,0)^2)*500
     endif else begin
-    sinc_scale=0 ; sinc(0)=1
+      sinc_scale=0 ; sinc(0)=1
     endelse
 
 
@@ -169,7 +177,8 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
             ; 06/08/20 added by paul
             a2=a1
             ;inserts the first 51 elements of randomu
-            a2(0:sinc_scale )=randomu(seed,tdim)*2*!pi ;
+            if sinc_scale ne 0 then a2(0:sinc_scale-1 )=randomu(seed,tdim)*2*!pi ;
+
             a2=complex(cos(a2),sin(a2))
             a2=fft(a2,-1)
             b2=a2*mask
@@ -386,9 +395,9 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
         ;oplot, l1, l2, linestyle = 1
 
 
-        cgPlot, xctmp_12(0:500), Position=[0.10, 0.10, 0.90, 0.30]
+        cgPlot, xctmp_12(0:500), Position=[0.10, 0.70, 0.90, 0.90] ; top graph
         cgPlot, xctmp_23(0:500), Position=[0.10, 0.40, 0.90, 0.60], /noerase
-        cgPlot, xctmp_13(0:500), Position=[0.10, 0.70, 0.90, 0.90], /noerase
+        cgPlot, xctmp_13(0:500), Position=[0.10, 0.1, 0.90, 0.3], /noerase ; bottom graph
 
         ;cgPlot, cgDemoData(17), Position=[0.40, 0.10, 0.60, 0.90], /noerase
         ;cgPlot, cgDemoData(17), Position=[0.70, 0.10, 0.90, 0.90], /noerase
@@ -491,6 +500,8 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
     ;snr = z(100) / stddev(sig)
     ;print, 'Signal-to-Noise Ratio: ', snr
     ;print, systime(1) - T, ' seconds'
+    print, 'xctmp_12(100)-mean(xctmp_12(20:80)): '
+    print, xctmp_12(100)-mean(xctmp_12(20:80))
 stop
 
 end
