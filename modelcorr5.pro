@@ -96,25 +96,25 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
                              seed)
     endif
 
-    ; calculate sinc_scale
+    ; calculate bessel_scale
     ; we are trying to reproduce corr vs baseline function for some baseline
     ; so for some baseline, we need to produce the correct normalised correlation value
-    ; we do this with sinc_scale, which determines how correlated scope 1 & 2 and scope 2 & 3 will be
-    ; note sinc_scale is decorrelating scope 2
-    ; from plots produced 6/2020 can see that decorrelation is linear function of sinc_scale values
+    ; we do this with bessel_scale, which determines how correlated scope 1 & 2 and scope 2 & 3 will be
+    ; note bessel_scale is decorrelating scope 2
+    ; from plots produced 6/2020 can see that decorrelation is linear function of bessel_scale values
     ; to produce correlation plot, need to get max correlation (corresponding to zero basline)
-    ; to get this, just make sinc_scale=0
+    ; to get this, just make bessel_scale=0
     ; the value of the correlation here will be used to normalize all the correlations on the plot
-    ; so sinc_scale =0 corresponds to corr max
-    ; sinc_scale=500-1 corresponds to corr 0
+    ; so bessel_scale =0 corresponds to corr max
+    ; bessel_scale=500-1 corresponds to corr 0
     ; x=findgen(1001)/100-5 ; gen floats from -5 to pos 5
     ;  x=findgen(101)/100; 0 to 1
     ; y=sinc(x)
     ; y = 1-y
-    ; so now want to be able to input ang diameter of star and then make sinc_scale based off that
+    ; so now want to be able to input ang diameter of star and then make bessel_scale based off that
     ; 1 arcsec = 4.84814e-6 rad
     ; note arcsec denoted with "
-    ; sirius is 0.005936"
+    ; one value for sirius is 0.005936"
     ; .005936 * π/648000. radians
     ; relationship between lam B and ang size is:
     ; alpha=lam/B
@@ -126,19 +126,31 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
     ; sinc_scale = sinc(10/18.485998)*500
     ;baseline=findgen(1001)/30; 0 to 33
     ; https://mathworld.wolfram.com/BesselFunctionZeros.html
-    ; j bessel function zeros
-    ; j_0 --> 2.4048
-    ; beselj(2.4048,0)= 1.33004e-05
 
+    ;06/15/2020 switching from sinc to bessel function
+
+    ; https://arxiv.org/pdf/1010.3790.pdf
+    ; The Angular Diameter and Fundamental Parameters of Sirius A
+
+    ; aperture size affects correlation (if large aperture size compared to baseline)
+
+
+    ; sirius
+    ; Han Brown used ang diam = 5.6e-3 arcsec (p 134) I think corresponds to graph p 150
+    ; wavelength = 450 (hanbury brown p 150)
+    ; resulting graph does not perfectly match the graph on p 150 but is close
 
 
     if baseline ne 0 then begin
       source_size_rad=source_size * !DPI/648000.
       zero_baseline=lambda0/source_size_rad ; baseline that gives zero correlation
-    ;  sinc_scale=(1-sinc(baseline/zero_baseline)^2)*500
-    sinc_scale=(1-beselj(baseline/zero_baseline,0)^2)*500
+      ;bessel_scale=(1-sinc(baseline/zero_baseline)^2)*500
+      x=!DPI*baseline/zero_baseline
+      ;bessel_scale=(1-beselj(baseline*2.4048/zero_baseline,0)^2)*500
+      bessel_scale=(1-(2*beselj(x,1)/x)^2)*500
+
     endif else begin
-      sinc_scale=0 ; sinc(0)=1
+      bessel_scale=0 ; sinc(0)=1
     endelse
 
 
@@ -177,7 +189,7 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
             ; 06/08/20 added by paul
             a2=a1
             ;inserts the first 51 elements of randomu
-            if sinc_scale ne 0 then a2(0:sinc_scale-1 )=randomu(seed,tdim)*2*!pi ;
+            if bessel_scale ne 0 then a2(0:bessel_scale-1 )=randomu(seed,tdim)*2*!pi ;
 
             a2=complex(cos(a2),sin(a2))
             a2=fft(a2,-1)
@@ -502,6 +514,21 @@ pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
     ;print, systime(1) - T, ' seconds'
     print, 'xctmp_12(100)-mean(xctmp_12(20:80)): '
     print, xctmp_12(100)-mean(xctmp_12(20:80))
+
+    print, 'xctmp_23(100)-mean(xctmp_23(20:80)): '
+    print, xctmp_23(100)-mean(xctmp_23(20:80))
+
+    print, 'xctmp_13(100)-mean(xctmp_13(20:80)): '
+    print, xctmp_13(100)-mean(xctmp_13(20:80))
+
+    print, 'snr_12= '
+    print, snr_12
+    print, 'snr_23= '
+    print, snr_23
+    print, 'snr_13= '
+    print, snr_13
+
+
 stop
 
 end
