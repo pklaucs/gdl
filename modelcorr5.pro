@@ -1,7 +1,7 @@
 pro modelcorr5, lambda0, deltalam, dt, trials, sxcorr, countrate, $
     FIXED = fixed, SEED = seed, $
     SNR_OUT = snr_out, RAND_OUT = rand_out, TEST=test, source_size, baseline
-
+;
     ; run with modelcorr4, 600, 0.1, 0, 1000, xc, 1.0e9
     ; enter lambda0, deltalam in nm
     ; NOTE: for count rates, use mag 0 star --> 10300 photons/s/cm^2/nm
